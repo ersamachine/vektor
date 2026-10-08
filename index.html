@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERSA Vektör</title>
+<meta name="description" content="Logo görselini CorelDRAW'da düzenlenebilir EPS'ye çevirir ve sonucu kendisi kontrol eder.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B71C1C'/%3E%3Cpath d='M16 18h9l7 20 7-20h9L37 48h-10z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F4F6; --card:#FFFFFF; --ink:#1F2430; --muted:#6B7280; --line:#E2E5EA; --soft:#F8F9FB;
+  --accent:#B71C1C; --accent-d:#8E1515;
+  --ok:#1B7F3B; --ok-bg:#E7F5EC; --warn:#9A6700; --warn-bg:#FFF6DB; --fail:#B42318; --fail-bg:#FDECEA;
+  --work:#1D4ED8; --work-bg:#E8EEFD;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,"Segoe UI",sans-serif;min-height:100vh;display:flex;flex-direction:column}
+button,select,input{font:inherit;color:inherit}
+header{background:var(--ink);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-family:Montserrat,sans-serif;font-weight:700;font-size:20px;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+.brand i{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--accent);font-style:normal;font-size:16px}
+header p{margin:0;color:#C7CBD4;font-size:14px;flex:1;min-width:240px}
+.engine{font-size:13px;color:#C7CBD4;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#F59E0B;box-shadow:0 0 0 3px rgba(245,158,11,.25)}
+.dot.ok{background:#22C55E;box-shadow:0 0 0 3px rgba(34,197,94,.25)}
+.dot.err{background:#EF4444;box-shadow:0 0 0 3px rgba(239,68,68,.25)}
+main{flex:1;display:grid;grid-template-columns:380px 1fr;gap:16px;padding:16px;max-width:1500px;width:100%;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--card);border-radius:14px;border:1px solid var(--line);padding:16px}
+h2{font-family:Montserrat,sans-serif;font-size:15px;font-weight:600;margin:0 0 12px}
+#drop{border:2px dashed #A6ADB8;border-radius:14px;background:var(--card);padding:26px 16px;text-align:center;cursor:pointer;transition:.15s;outline:none}
+#drop:hover,#drop.over,#drop:focus-visible{border-color:var(--accent);background:#FFF7F7}
+#drop .arrow{font-size:28px;color:var(--accent);line-height:1}
+#drop b{display:block;font-family:Montserrat,sans-serif;font-size:16px;margin:8px 0 2px}
+#drop small{color:var(--muted);display:block}
+#drop small+small{font-size:12px;margin-top:2px}
+.row{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:8px;margin:8px 0}
+.row label{color:var(--muted);font-size:14px}
+select,input[type=number]{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;width:100%}
+.inline{display:flex;align-items:center;gap:8px}
+.inline input[type=number]{width:110px}
+.checks{display:flex;gap:16px}
+.checks label{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.listhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.listhead h2{margin:0}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 14px;cursor:pointer;font-weight:500;transition:.12s}
+.btn:hover:not(:disabled){background:var(--soft);border-color:#C9CED6}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.main:hover:not(:disabled){background:var(--accent-d)}
+.btn.sm{padding:5px 10px;font-size:13px}
+#list{list-style:none;margin:0;padding:0;max-height:46vh;overflow:auto}
+#list li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+#list li:hover{background:var(--soft)}
+#list li.sel{background:#EEF2FF;border-color:#C7D2FE}
+#list .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+#list .sc{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;text-align:right}
+#list .st{font-size:12.5px;grid-column:1/-1}
+.empty{color:var(--muted);font-size:14px;padding:6px 2px}
+.s-ok{color:var(--ok)} .s-warn{color:var(--warn)} .s-fail{color:var(--fail)} .s-wait{color:var(--muted)} .s-work{color:var(--work)}
+.view{display:flex;flex-direction:column;gap:12px;min-height:620px}
+.viewhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.viewhead h2{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.seg{display:inline-flex;background:#E9ECF0;border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:500;color:#374151}
+.seg button.on{background:var(--ink);color:#fff}
+#banner{border-radius:10px;padding:10px 14px;font-family:Montserrat,sans-serif;font-weight:600;font-size:15.5px;background:var(--soft)}
+.b-ok{background:var(--ok-bg)!important;color:var(--ok)} .b-warn{background:var(--warn-bg)!important;color:var(--warn)}
+.b-fail{background:var(--fail-bg)!important;color:var(--fail)} .b-work{background:var(--work-bg)!important;color:var(--work)}
+#stage{flex:1;min-height:340px;border-radius:12px;background:#FAFAFA;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;position:relative}
+#stage img{max-width:100%;max-height:62vh;display:block;image-rendering:auto}
+#stage .ph{color:var(--muted);text-align:center;padding:24px;max-width:520px}
+#stage .ph ol{text-align:left;margin:12px 0 0;padding-left:20px;line-height:1.7}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid #DCE3F5;border-top-color:var(--work);animation:r 0.9s linear infinite;margin:0 auto 10px}
+@keyframes r{to{transform:rotate(360deg)}}
+#legend{font-size:13px;color:var(--muted);min-height:18px}
+.bottom{display:grid;grid-template-columns:1fr 210px;gap:12px}
+#report{margin:0;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:13.5px/1.55 Inter,system-ui,sans-serif;white-space:pre-wrap;min-height:150px;max-height:300px;overflow:auto}
+.actions{display:flex;flex-direction:column;gap:8px}
+.actions .btn{width:100%}
+footer{color:var(--muted);font-size:12.5px;text-align:center;padding:4px 16px 18px}
+@media (max-width:980px){
+  main{grid-template-columns:1fr}
+  .bottom{grid-template-columns:1fr}
+  .view{min-height:0}
+  #stage{min-height:260px}
+}
+@media (max-width:520px){
+  main{padding:12px 16px}
+  header{padding:12px 16px}
+  .seg button{padding:7px 10px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><i>V</i>ERSA Vektör</div>
+  <p>Logo görselini CorelDRAW'da düzenlenebilir EPS'ye çevirir ve sonucu kendisi kontrol eder.</p>
+  <div class="engine"><span class="dot" id="dot"></span><span id="engine">Çeviri motoru hazırlanıyor…</span></div>
+</header>
+
+<main>
+  <div class="col">
+    <div id="drop" tabindex="0" role="button" aria-label="Logo dosyası seç">
+      <div class="arrow">⬇</div>
+      <b>Logoları buraya sürükleyin</b>
+      <small>ya da tıklayıp seçin · Ctrl+V ile yapıştırın</small>
+      <small>PNG · JPG · BMP · GIF · TIF · WEBP</small>
+      <input id="file" type="file" accept="image/*,.png,.jpg,.jpeg,.bmp,.gif,.tif,.tiff,.webp" multiple hidden>
+    </div>
+
+    <div class="card">
+      <h2>Ayarlar</h2>
+      <div class="row"><label for="colors">Renk</label>
+        <select id="colors">
+          <option value="auto">Otomatik (orijinal renkler)</option>
+          <option value="mono">Tek renk – siyah</option>
+          <option value="2">2 renk</option><option value="3">3 renk</option><option value="4">4 renk</option>
+          <option value="5">5 renk</option><option value="6">6 renk</option><option value="7">7 renk</option><option value="8">8 renk</option>
+        </select></div>
+      <div class="row"><label for="preset">Ayrıntı</label>
+        <select id="preset"><option>Hassas</option><option selected>Normal</option><option>Yumuşak</option></select></div>
+      <div class="row"><label for="size">Uzun kenar</label>
+        <div class="inline"><input id="size" type="number" min="10" max="5000" step="10" value="200"><span>mm</span></div></div>
+      <div class="row"><label>Ek dosya</label>
+        <div class="checks"><label><input type="checkbox" id="pdf"> PDF</label><label><input type="checkbox" id="svg"> SVG</label></div></div>
+      <p class="hint">Ayarlar sonraki dosyalara uygulanır. Seçili dosyayı yeni ayarla çevirmek için “Yeniden çevir”e basın.</p>
+    </div>
+
+    <div class="card">
+      <div class="listhead"><h2>Dosyalar</h2>
+        <div><button class="btn sm" id="zip" disabled>Tümünü indir</button> <button class="btn sm" id="clear">Temizle</button></div></div>
+      <ul id="list"></ul>
+      <div class="empty" id="empty">Henüz dosya yok.</div>
+    </div>
+  </div>
+
+  <div class="card view">
+    <div class="viewhead">
+      <h2 id="title">Önizleme</h2>
+      <div class="seg" id="seg">
+        <button data-v="orig">Orijinal</button><button data-v="vec" class="on">Vektör (EPS)</button><button data-v="diff">Kontrol</button>
+      </div>
+    </div>
+    <div id="banner">Başlamak için logoları soldaki alana sürükleyin.</div>
+    <div id="stage">
+      <div class="ph">
+        <b>Nasıl çalışır?</b>
+        <ol>
+          <li>Müşterinin gönderdiği logo görselini soldaki alana bırakın.</li>
+          <li>Logo çizgiye çevrilir: her harf ve şekil ayrı nesne, renkler CMYK.</li>
+          <li>Üretilen EPS baştan okunur, yeniden çizilir ve orijinalle piksel piksel karşılaştırılır.</li>
+          <li><span class="s-ok">✔ Kusursuz</span> ise doğrudan kullanın; <span class="s-warn">⚠</span> ise işaretli yerlere bakın.</li>
+        </ol>
+      </div>
+    </div>
+    <div id="legend"></div>
+    <div class="bottom">
+      <pre id="report">Corel'de: Dosya → İçe Aktar (Ctrl+I) ile EPS'yi seçin, ardından Ctrl+U ile grubu çözün. Her harf ayrı seçilir, düğümleri F10 ile düzenlenir.</pre>
+      <div class="actions">
+        <button class="btn main" id="dlEps" disabled>EPS indir</button>
+        <button class="btn" id="dlPdf" disabled hidden>PDF indir</button>
+        <button class="btn" id="dlSvg" disabled hidden>SVG indir</button>
+        <button class="btn" id="redo" disabled>Yeniden çevir</button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>Dosyalarınız bilgisayarınızdan çıkmaz — çeviri ve kontrol tarayıcının içinde yapılır. · ERSA Vektör</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const STATUS = {
+    wait: ["s-wait", "Sırada"], work: ["s-work", "Çevriliyor…"],
+    ok: ["s-ok", "✔ Kusursuz"], warn: ["s-warn", "⚠ Kontrol et"], fail: ["s-fail", "✖ Sorunlu"],
+  };
+  const IMG_RE = /\.(png|jpe?g|bmp|gif|tiff?|webp)$/i;
+  const VEC_RE = /\.(eps|ai|pdf|svg|cdr)$/i;
+  const items = [];        // {id,name,data,opts,status,msg,res,urls}
+  let sel = null, view = "vec", nextId = 1, ready = false;
+
+  // ------------------------------------------------------------ ayarlar
+  const prefKeys = ["colors", "preset", "size", "pdf", "svg"];
+  try {
+    const p = JSON.parse(localStorage.getItem("ersa_vektor_ayar") || "{}");
+    for (const k of prefKeys) if (k in p) { const el = $(k); el.type === "checkbox" ? el.checked = p[k] : el.value = p[k]; }
+  } catch (e) {}
+  function opts() {
+    const o = { colors: $("colors").value, preset: $("preset").value,
+      size: Math.min(5000, Math.max(10, parseFloat(String($("size").value).replace(",", ".")) || 200)),
+      pdf: $("pdf").checked, svg: $("svg").checked };
+    try { localStorage.setItem("ersa_vektor_ayar", JSON.stringify(o)); } catch (e) {}
+    return o;
+  }
+  for (const k of prefKeys) $(k).addEventListener("change", opts);
+
+  // ------------------------------------------------------------ motor
+  const worker = new Worker("worker.js");
+  const t0 = performance.now();
+  worker.onmessage = (ev) => {
+    const m = ev.data;
+    if (m.type === "boot") { $("engine").textContent = m.msg + "…"; }
+    else if (m.type === "ready") {
+      ready = true;
+      $("dot").className = "dot ok";
+      $("engine").textContent = "Motor hazır";
+      $("engine").title = "Hazırlık " + ((performance.now() - t0) / 1000).toFixed(1) + " sn · çekirdek v" + m.version;
+      render();
+    } else if (m.type === "fatal") {
+      $("dot").className = "dot err";
+      $("engine").textContent = "Motor yüklenemedi";
+      setBanner("fail", "Çeviri motoru yüklenemedi: internet bağlantısını kontrol edip sayfayı yenileyin.");
+      $("report").textContent = m.msg;
+    } else if (m.type === "start") { upd(m.id, { status: "work", msg: "Başladı" }); }
+    else if (m.type === "progress") { upd(m.id, { msg: m.msg }); }
+    else if (m.type === "done") { done(m.id, m.res); }
+  };
+
+  // ------------------------------------------------------------ dosya ekleme
+  function addFiles(files) {
+    let first = null;
+    for (const f of files) {
+      const it = { id: nextId++, name: f.name || "yapistirilan.png", status: "wait", msg: "", res: null, urls: {} };
+      if (!IMG_RE.test(it.name) && !(f.type || "").startsWith("image/")) {
+        it.status = "fail";
+        it.res = { status: "fail", headline: VEC_RE.test(it.name) ? "Bu dosya zaten vektör" : "Bu dosya türü desteklenmiyor",
+          report: VEC_RE.test(it.name) ? "EPS, AI, PDF, SVG ve CDR dosyaları zaten vektördür; doğrudan Corel'de açın."
+            : "Yalnız piksel görseller çevrilir: PNG, JPG, BMP, GIF, TIF, WEBP.", files: [] };
+        items.push(it); first = first || it; continue;
+      }
+      items.push(it); first = first || it;
+      f.arrayBuffer().then((buf) => { it.data = new Uint8Array(buf); send(it, opts()); });
+    }
+    if (first && (sel === null || !items.find((x) => x.id === sel)?.res)) sel = first.id;
+    render();
+  }
+  function send(it, o) {
+    it.opts = o;
+    const copy = it.data.slice();
+    worker.postMessage({ id: it.id, name: it.name, data: copy, opts: o }, [copy.buffer]);
+  }
+  $("drop").addEventListener("click", () => $("file").click());
+  $("drop").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
+  $("file").addEventListener("change", (e) => { addFiles([...e.target.files]); e.target.value = ""; });
+  ["dragenter", "dragover"].forEach((t) => document.addEventListener(t, (e) => { e.preventDefault(); $("drop").classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => document.addEventListener(t, (e) => {
+    if (t === "dragleave" && e.relatedTarget) return;
+    e.preventDefault(); $("drop").classList.remove("over");
+  }));
+  document.addEventListener("drop", (e) => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+  document.addEventListener("paste", (e) => {
+    const fs = [...(e.clipboardData?.items || [])].filter((i) => i.kind === "file").map((i) => i.getAsFile()).filter(Boolean);
+    if (fs.length) addFiles(fs.map((f, i) => new File([f], f.name && f.name !== "image.png" ? f.name : `yapistirilan-${nextId + i}.png`, { type: f.type })));
+  });
+
+  // ------------------------------------------------------------ sonuçlar
+  function upd(id, patch) {
+    const it = items.find((x) => x.id === id); if (!it) return;
+    Object.assign(it, patch); render();
+  }
+  function done(id, res) {
+    const it = items.find((x) => x.id === id); if (!it) return;
+    for (const u of Object.values(it.urls)) URL.revokeObjectURL(u);
+    it.urls = {};
+    for (const k of ["orig", "vec", "diff"]) if (res[k]) it.urls[k] = URL.createObjectURL(new Blob([res[k]], { type: "image/png" }));
+    it.res = res; it.status = res.status;
+    const cur = items.find((x) => x.id === sel);
+    if (!cur || !cur.res || cur.id === id) sel = id;
+    render();
+  }
+  function score(r) {
+    if (!r || !r.files || !r.files.length) return "";
+    const s = Math.min(r.shape, r.color);
+    return s >= 99.995 ? "%100" : "%" + s.toFixed(1).replace(".", ",");
+  }
+
+  // ------------------------------------------------------------ çizim
+  function setBanner(st, text) { $("banner").className = st ? "b-" + st : ""; $("banner").textContent = text; }
+  function render() {
+    const ul = $("list"); ul.innerHTML = "";
+    $("empty").hidden = items.length > 0;
+    for (const it of items) {
+      const li = document.createElement("li");
+      if (it.id === sel) li.className = "sel";
+      const [cls, txt] = STATUS[it.status];
+      li.innerHTML = `<span class="nm"></span><span class="sc">${score(it.res)}</span><span class="st ${cls}"></span>`;
+      li.querySelector(".nm").textContent = it.name;
+      li.querySelector(".st").textContent = it.status === "work" && it.msg ? it.msg + "…" : (it.status === "wait" && !ready ? "Motor bekleniyor" : txt);
+      li.onclick = () => { sel = it.id; render(); };
+      ul.appendChild(li);
+    }
+    $("zip").disabled = items.filter((x) => x.res && x.res.files && x.res.files.length).length < 2;
+    const it = items.find((x) => x.id === sel);
+    const stage = $("stage");
+    for (const b of $("seg").children) b.classList.toggle("on", b.dataset.v === view);
+    if (!it) { $("dlEps").disabled = $("redo").disabled = true; return; }
+    $("title").textContent = it.name;
+    const r = it.res;
+    if (!r) {
+      setBanner("work", it.status === "work" ? (it.msg || "Çevriliyor") + "…" : (ready ? "Sırada bekliyor…" : "Çeviri motoru hazırlanıyor, dosya sırada…"));
+      stage.innerHTML = `<div class="ph"><div class="spin"></div>${it.status === "work" ? "Logo çiziliyor ve kontrol ediliyor" : "Sırada"}</div>`;
+      $("legend").textContent = ""; $("report").textContent = "";
+      $("dlEps").disabled = $("redo").disabled = true; $("dlPdf").hidden = $("dlSvg").hidden = true;
+      return;
+    }
+    const icon = { ok: "✔", warn: "⚠", fail: "✖" }[r.status] || "";
+    setBanner(r.status, `${icon}  ${r.headline}`);
+    $("report").textContent = r.report || "";
+    const url = it.urls[view];
+    stage.innerHTML = "";
+    if (url) { const img = new Image(); img.src = url; img.alt = it.name; stage.appendChild(img); }
+    else stage.innerHTML = `<div class="ph">Önizleme yok.</div>`;
+    $("legend").textContent = !url ? "" : view === "orig" ? "Müşterinin gönderdiği görsel"
+      : view === "vec" ? "EPS dosyasından yeniden çizildi (damalı alan = şeffaf)"
+      : "Yeşilimsi = vektörün kapladığı yer · Kırmızı = orijinalden farklı çıkan yer (halka içinde)";
+    const f = (ext) => (r.files || []).find((x) => x.name.toLowerCase().endsWith(ext));
+    $("dlEps").disabled = !f(".eps");
+    $("dlPdf").hidden = !f(".pdf"); $("dlPdf").disabled = !f(".pdf");
+    $("dlSvg").hidden = !f(".svg"); $("dlSvg").disabled = !f(".svg");
+    $("redo").disabled = !it.data;
+  }
+  $("seg").addEventListener("click", (e) => { if (e.target.dataset.v) { view = e.target.dataset.v; render(); } });
+
+  // ------------------------------------------------------------ indirme
+  const MIME = { ".eps": "application/postscript", ".pdf": "application/pdf", ".svg": "image/svg+xml" };
+  function save(file) {
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([file.data], { type: MIME[ext] || "application/octet-stream" }));
+    a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  function dl(ext) {
+    const it = items.find((x) => x.id === sel);
+    const f = it?.res?.files?.find((x) => x.name.toLowerCase().endsWith(ext));
+    if (f) save(f);
+  }
+  $("dlEps").onclick = () => dl(".eps");
+  $("dlPdf").onclick = () => dl(".pdf");
+  $("dlSvg").onclick = () => dl(".svg");
+  $("redo").onclick = () => {
+    const it = items.find((x) => x.id === sel); if (!it || !it.data) return;
+    it.res = null; it.status = "wait"; it.msg = ""; send(it, opts()); render();
+  };
+  $("clear").onclick = () => {
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (items[i].res || items[i].status === "fail") { for (const u of Object.values(items[i].urls)) URL.revokeObjectURL(u); items.splice(i, 1); }
+    }
+    sel = items.length ? items[0].id : null;
+    if (!items.length) {
+      $("title").textContent = "Önizleme"; setBanner("", "Başlamak için logoları soldaki alana sürükleyin.");
+      $("stage").innerHTML = `<div class="ph">Logoları soldaki alana bırakın.</div>`; $("legend").textContent = "";
+      $("report").textContent = ""; $("dlEps").disabled = $("redo").disabled = true; $("dlPdf").hidden = $("dlSvg").hidden = true;
+    }
+    render();
+  };
+  $("zip").onclick = async () => {
+    if (!window.JSZip) { for (const it of items) for (const f of it.res?.files || []) save(f); return; }
+    const zip = new JSZip(); const used = new Set();
+    for (const it of items) for (const f of it.res?.files || []) {
+      let n = f.name, i = 2;
+      while (used.has(n)) n = f.name.replace(/(\.[^.]+)$/, `-${i++}$1`);
+      used.add(n); zip.file(n, f.data);
+    }
+    const blob = await zip.generateAsync({ type: "blob" });
+    save({ name: "vektor-dosyalari.zip", data: blob });
+  };
+
+  // geliştirme: #test=dosya1,dosya2 ile örnek dosyaları otomatik yükler
+  if (location.hash.startsWith("#test=")) {
+    const names = decodeURIComponent(location.hash.slice(6)).split(",");
+    Promise.all(names.map((n) => fetch(n).then((r) => r.blob()).then((b) => new File([b], n.split("/").pop(), { type: b.type }))))
+      .then(addFiles);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
