@@ -28,7 +28,7 @@ WORK_TARGET = 2600   # izleme çözünürlüğü hedefi (uzun kenar, px)
 
 @dataclass
 class Settings:
-    colors: object = "auto"   # "auto", "mono" ya da 1..8
+    colors: object = "auto"   # "auto", "mono" (siyah), "own" (logonun rengi, efektli logolar) ya da 1..8
     preset: str = "Normal"
     size_mm: float = 200.0
     pdf: bool = False
@@ -355,6 +355,59 @@ def banding(lbl, palette):
         if np.linalg.norm(lab[i - 1] - lab[j - 1]) < 20:
             return True
     return False
+
+
+def otsu(values, bins=256):
+    v = values[np.isfinite(values)]
+    hi = float(np.percentile(v, 99.5)) if len(v) else 1.0
+    hist, edges = np.histogram(np.clip(v, 0, hi), bins=bins, range=(0, max(hi, 1e-6)))
+    p = hist.astype(np.float64) / max(1, hist.sum())
+    c = (edges[:-1] + edges[1:]) / 2
+    w0 = np.cumsum(p)
+    m0 = np.cumsum(p * c)
+    mt = m0[-1]
+    between = (mt * w0 - m0) ** 2 / np.maximum(w0 * (1 - w0), 1e-12)
+    return float(c[int(np.argmax(between))])
+
+
+def effect_segment(rgb, lab, bg_lab):
+    """Efektli logo (3B, metalik, gölgeli, değişken zemin): logonun zeminden ayrılma payı (0..1)
+    ve ana rengi. Zemin yerel olarak tahmin edilir; ayrım renk doygunluğu ağırlıklıdır."""
+    h, w = lab.shape[:2]
+    f = min(1.0, 320 / max(h, w))
+    sw, sh = max(8, int(w * f)), max(8, int(h * f))
+    lab_s = cv2.resize(lab, (sw, sh), interpolation=cv2.INTER_AREA)
+    bgm = (np.linalg.norm(lab_s - bg_lab, axis=2) < 12).astype(np.float32)
+    sig = max(3.0, 0.05 * max(sw, sh))
+    score = None
+    for _ in range(3):
+        den = cv2.GaussianBlur(bgm, (0, 0), sig)
+        num = cv2.GaussianBlur(lab_s * bgm[..., None], (0, 0), sig)
+        local_s = np.where(den[..., None] > 1e-3, num / np.maximum(den[..., None], 1e-6), bg_lab)
+        local = cv2.resize(local_s.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+        d = lab - local
+        score = np.sqrt((0.6 * d[..., 0]) ** 2 + d[..., 1] ** 2 + d[..., 2] ** 2)
+        thr = otsu(score)
+        fg_s = cv2.resize(score.astype(np.float32), (sw, sh), interpolation=cv2.INTER_AREA) > thr
+        k = np.ones((5, 5), np.uint8)
+        bgm = (~cv2.dilate(fg_s.astype(np.uint8), k).astype(bool)).astype(np.float32)
+    width = max(2.0, 0.25 * thr)
+    cov = np.clip((score - thr) / (2 * width) + 0.5, 0, 1).astype(np.float32)
+    m = cov >= 0.5
+    # gölge dikişlerini kapat (2r pikselden dar koyu çizgiler) ve küçük karanlık delikleri doldur
+    r = max(1, round(0.0015 * max(h, w)))
+    kk = np.ones((2 * r + 1, 2 * r + 1), np.uint8)
+    closed = cv2.erode(cv2.dilate(m.astype(np.uint8), kk), kk).astype(bool)
+    n, cc, stats, _ = cv2.connectedComponentsWithStats((~closed).astype(np.uint8), connectivity=4)
+    border = np.unique(np.concatenate([cc[0], cc[-1], cc[:, 0], cc[:, -1]]))
+    small = np.zeros(n, bool)
+    small[1:] = stats[1:, cv2.CC_STAT_AREA] < 0.0004 * h * w
+    small[border] = False
+    filled = closed | small[cc]
+    cov = np.where(filled & ~m, 1.0, cov).astype(np.float32)
+    core = cov > 0.9
+    color = np.median(rgb[core], 0).astype(np.float32) if core.any() else np.array([0, 0, 0], np.float32)
+    return cov, color, int(small[1:].sum())
 
 
 UNEXPLAINED = 0.15   # hiçbir renk çiftinin karışımıyla açıklanamayan piksel eşiği (RGB)
@@ -890,30 +943,49 @@ def convert(src, st: Settings, progress=lambda msg: None):
             res.headline = "Görselde logo bulunamadı"
             res.checks.append((False, "Arka plandan ayrışan çizim yok"))
             return res
-        if found > MAX_COLORS and not isinstance(st.colors, int) and st.colors != "mono":
+        if found > MAX_COLORS and st.colors == "multi":
             res.warnings.append(f"Görselde çok fazla renk var ({found}+); en baskın {MAX_COLORS} renge indirildi.")
         if bg_rgb.min() < 0.9:
             res.checks.append((True, "Zemin rengi çizilmedi (yalnız logo alındı)"))
         mono = st.colors == "mono"
+        effect = st.colors == "own" or (st.colors == "auto" and (grad > 0.12 or found > MAX_COLORS))
 
-        if not isinstance(st.colors, int) and not mono:
-            palette, added = augment_palette(rgb, bg_rgb.astype(np.float32), palette)
-            if added:
-                res.checks.append((True, f"İnce ayrıntılarda {added} ek renk bulundu"))
-        centers = np.concatenate([bg_rgb[None].astype(np.float32), palette])
-        a, b, t, resid = blend_assign(rgb, centers)
-        if not mono and (grad > 0.12 or (len(palette) > 1 and banding(np.where(t < 0.5, a, b), palette))):
-            grad = max(grad, 0.13)
-            res.warnings.append("Görselde degrade/gölge var; düz renk bantlarına indirgendi. "
-                                "Degrade gerekiyorsa Corel'de elle verin.")
-        K = len(palette)
-        if mono:
-            remap = np.array([0] + [1] * K, np.uint8)
-            a, b = remap[a], remap[b]
+        if effect:
+            # 3B/metalik/gölgeli logo: tek düz renk (logonun kendi rengi), zemin yerel tahminli
+            progress("Efektli logo ayrıştırılıyor")
+            cov_e, fg_col, n_holes = effect_segment(rgb, lab, bg_lab)
+            palette = fg_col[None]
+            centers = np.concatenate([bg_rgb[None].astype(np.float32), palette])
+            a = np.zeros((h, w), np.uint8)
+            b = np.ones((h, w), np.uint8)
+            t = cov_e
+            mono = True
             K = 1
-            layer_rgb = [np.array([0, 0, 0], np.float32)]
+            layer_rgb = [fg_col]
+            if st.colors == "auto":
+                res.warnings.append("Efektli logo (gölge, parlaklık ya da 3B): tek düz renk olarak, logonun kendi "
+                                    "rengiyle çıkarıldı. Koyu gölgeli kenarlara bir göz atın.")
+            if n_holes:
+                res.checks.append((True, f"Gölgeden oluşan {n_holes} küçük delik dolduruldu"))
         else:
-            layer_rgb = list(palette)
+            if not isinstance(st.colors, int) and not mono:
+                palette, added = augment_palette(rgb, bg_rgb.astype(np.float32), palette)
+                if added:
+                    res.checks.append((True, f"İnce ayrıntılarda {added} ek renk bulundu"))
+            centers = np.concatenate([bg_rgb[None].astype(np.float32), palette])
+            a, b, t, resid = blend_assign(rgb, centers)
+            if not mono and (grad > 0.12 or (len(palette) > 1 and banding(np.where(t < 0.5, a, b), palette))):
+                grad = max(grad, 0.13)
+                res.warnings.append("Görselde degrade/gölge var; düz renk bantlarına indirgendi. "
+                                    "Degrade gerekiyorsa Corel'de elle verin.")
+            K = len(palette)
+            if mono:
+                remap = np.array([0] + [1] * K, np.uint8)
+                a, b = remap[a], remap[b]
+                K = 1
+                layer_rgb = [np.array([0, 0, 0], np.float32)]
+            else:
+                layer_rgb = list(palette)
 
         # izleme çözünürlüğü
         long = max(h, w)

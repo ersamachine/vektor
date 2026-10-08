@@ -31,7 +31,7 @@ def run(job_id, name, data, colors, preset, size_mm, pdf, svg):
     src = "/tmp/in/" + safe
     with open(src, "wb") as fh:
         fh.write(data.to_py())
-    if colors in ("auto", "mono"):
+    if colors in ("auto", "mono", "own"):
         col = colors
     else:
         col = int(colors)
