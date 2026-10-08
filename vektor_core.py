@@ -391,8 +391,10 @@ def effect_segment(rgb, lab, bg_lab):
         fg_s = cv2.resize(score.astype(np.float32), (sw, sh), interpolation=cv2.INTER_AREA) > thr
         k = np.ones((5, 5), np.uint8)
         bgm = (~cv2.dilate(fg_s.astype(np.uint8), k).astype(bool)).astype(np.float32)
-    width = max(2.0, 0.25 * thr)
-    cov = np.clip((score - thr) / (2 * width) + 0.5, 0, 1).astype(np.float32)
+    # kenar piksel altı hassasiyetle: puan hafifçe yumuşatılır, geçiş geniş tutulur
+    # (keskin "ya logo ya zemin" kararı kenarda piksel basamakları bırakır)
+    score_b = cv2.GaussianBlur(score.astype(np.float32), (0, 0), 1.1)
+    cov = np.clip((score_b - thr) / (0.5 * thr) + 0.5, 0, 1).astype(np.float32)
     m = cov >= 0.5
     # gölge dikişlerini kapat (2r pikselden dar koyu çizgiler) ve küçük karanlık delikleri doldur
     r = max(1, round(0.0015 * max(h, w)))
@@ -405,6 +407,7 @@ def effect_segment(rgb, lab, bg_lab):
     small[border] = False
     filled = closed | small[cc]
     cov = np.where(filled & ~m, 1.0, cov).astype(np.float32)
+    cov = cv2.GaussianBlur(cov, (0, 0), 0.6)
     core = cov > 0.9
     color = np.median(rgb[core], 0).astype(np.float32) if core.any() else np.array([0, 0, 0], np.float32)
     return cov, color, int(small[1:].sum())
@@ -962,6 +965,7 @@ def convert(src, st: Settings, progress=lambda msg: None):
             mono = True
             K = 1
             layer_rgb = [fg_col]
+            prm = dict(prm, alphamax=max(prm["alphamax"], 1.2), opttolerance=max(prm["opttolerance"], 0.35))
             if st.colors == "auto":
                 res.warnings.append("Efektli logo (gölge, parlaklık ya da 3B): tek düz renk olarak, logonun kendi "
                                     "rengiyle çıkarıldı. Koyu gölgeli kenarlara bir göz atın.")
