@@ -357,6 +357,9 @@ def banding(lbl, palette):
     return False
 
 
+EFFECT_BLUR, EFFECT_CLOSE, EFFECT_SOFT = 0.8, 0, 0.5   # kenar yumuşatma; kapama 0 = ince ayırıcı çizgiler korunur
+
+
 def otsu(values, bins=256):
     v = values[np.isfinite(values)]
     hi = float(np.percentile(v, 99.5)) if len(v) else 1.0
@@ -393,13 +396,13 @@ def effect_segment(rgb, lab, bg_lab):
         bgm = (~cv2.dilate(fg_s.astype(np.uint8), k).astype(bool)).astype(np.float32)
     # kenar piksel altı hassasiyetle: puan hafifçe yumuşatılır, geçiş geniş tutulur
     # (keskin "ya logo ya zemin" kararı kenarda piksel basamakları bırakır)
-    score_b = cv2.GaussianBlur(score.astype(np.float32), (0, 0), 1.1)
+    score_b = cv2.GaussianBlur(score.astype(np.float32), (0, 0), EFFECT_BLUR)
     cov = np.clip((score_b - thr) / (0.5 * thr) + 0.5, 0, 1).astype(np.float32)
     m = cov >= 0.5
     # gölge dikişlerini kapat (2r pikselden dar koyu çizgiler) ve küçük karanlık delikleri doldur
-    r = max(1, round(0.0015 * max(h, w)))
+    r = EFFECT_CLOSE
     kk = np.ones((2 * r + 1, 2 * r + 1), np.uint8)
-    closed = cv2.erode(cv2.dilate(m.astype(np.uint8), kk), kk).astype(bool)
+    closed = cv2.erode(cv2.dilate(m.astype(np.uint8), kk), kk).astype(bool) if r else m.copy()
     n, cc, stats, _ = cv2.connectedComponentsWithStats((~closed).astype(np.uint8), connectivity=4)
     border = np.unique(np.concatenate([cc[0], cc[-1], cc[:, 0], cc[:, -1]]))
     small = np.zeros(n, bool)
@@ -407,7 +410,7 @@ def effect_segment(rgb, lab, bg_lab):
     small[border] = False
     filled = closed | small[cc]
     cov = np.where(filled & ~m, 1.0, cov).astype(np.float32)
-    cov = cv2.GaussianBlur(cov, (0, 0), 0.6)
+    cov = cv2.GaussianBlur(cov, (0, 0), EFFECT_SOFT) if EFFECT_SOFT else cov
     core = cov > 0.9
     color = np.median(rgb[core], 0).astype(np.float32) if core.any() else np.array([0, 0, 0], np.float32)
     return cov, color, int(small[1:].sum())
